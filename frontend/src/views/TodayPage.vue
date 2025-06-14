@@ -95,7 +95,7 @@
           <el-card>
             <template #header>
               <div class="card-header">
-                <el-icon><PieChart /></el-icon>
+                <el-icon><TrendCharts /></el-icon>
                 <span>语言分布</span>
               </div>
             </template>
@@ -123,7 +123,7 @@
           <el-card>
             <template #header>
               <div class="card-header">
-                <el-icon><DataLine /></el-icon>
+                <el-icon><DataAnalysis /></el-icon>
                 <span>新闻源统计</span>
               </div>
             </template>
@@ -234,7 +234,7 @@
                     type="text"
                     size="small"
                     @click="openOriginal(article.url)"
-                    :icon="ExternalLink"
+                    :icon="Link"
                   >
                     原文
                   </el-button>
@@ -310,11 +310,11 @@ import {
   Check,
   Clock,
   Close,
-  PieChart,
-  DataLine,
+  TrendCharts,
+  DataAnalysis,
   List,
   CopyDocument,
-  ExternalLink,
+  Link,
   User,
 } from '@element-plus/icons-vue'
 import { todayApi } from '@/api'

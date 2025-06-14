@@ -22,8 +22,8 @@ RUN npm run build
 # 生产阶段
 FROM nginx:alpine
 
-# 安装 tzdata 用于时区设置
-RUN apk add --no-cache tzdata
+# 安装 curl 和 tzdata
+RUN apk add --no-cache tzdata curl
 
 # 设置时区
 ENV TZ=Asia/Shanghai
@@ -33,6 +33,10 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # 复制 nginx 配置
 COPY nginx.conf /etc/nginx/nginx.conf
+
+# 复制等待脚本
+COPY wait-for-backend.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/wait-for-backend.sh
 
 # 创建日志目录
 RUN mkdir -p /var/log/nginx
@@ -44,5 +48,6 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost/ || exit 1
 
-# 启动 nginx
+# 使用等待脚本启动
+ENTRYPOINT ["/usr/local/bin/wait-for-backend.sh"]
 CMD ["nginx", "-g", "daemon off;"]

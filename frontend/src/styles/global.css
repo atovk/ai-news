@@ -33,6 +33,23 @@
 }
 
 /* 暗色主题 */
+:root.dark,
+html.dark {
+  --bg-color: #1a1a1a;
+  --bg-color-page: #0a0a0a;
+  --bg-color-overlay: rgba(26, 26, 26, 0.9);
+  
+  --text-color-primary: #e5eaf3;
+  --text-color-regular: #cfd3dc;
+  --text-color-secondary: #a3a6ad;
+  --text-color-placeholder: #6c6e72;
+  
+  --border-color: #4c4d4f;
+  --border-color-light: #414243;
+  --border-color-lighter: #363637;
+  --border-color-extra-light: #2b2b2c;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-color: #1a1a1a;

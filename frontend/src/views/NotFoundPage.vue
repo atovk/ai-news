@@ -2,7 +2,7 @@
   <div class="not-found-page">
     <div class="not-found-content">
       <div class="not-found-icon">
-        <el-icon size="120"><WarnTriangleFilled /></el-icon>
+        <el-icon size="120"><Warning /></el-icon>
       </div>
       <h1 class="not-found-title">页面未找到</h1>
       <p class="not-found-description">
@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { WarnTriangleFilled } from '@element-plus/icons-vue'
+import { Warning } from '@element-plus/icons-vue'
 
 const router = useRouter()
 

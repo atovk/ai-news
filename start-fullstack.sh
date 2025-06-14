@@ -55,18 +55,17 @@ check_requirements() {
 start_dev() {
     echo -e "${YELLOW}启动开发环境...${NC}"
     
-    # 启动后端
+    # 启动后端服务 (仅后端和依赖服务)
     echo -e "${BLUE}启动后端服务...${NC}"
-    if [ -f "docker-compose.yml" ]; then
-        docker-compose up -d
+    if [ -f "docker-compose.dev.yml" ]; then
+        docker-compose -f docker-compose.dev.yml up -d
     else
-        echo -e "${RED}未找到 docker-compose.yml 文件${NC}"
+        echo -e "${RED}未找到 docker-compose.dev.yml 文件${NC}"
         exit 1
     fi
     
     # 等待后端启动
     echo -e "${YELLOW}等待后端服务启动...${NC}"
-    sleep 10
     
     # 检查后端健康状态
     check_backend_health() {
@@ -89,29 +88,38 @@ start_dev() {
     }
     
     if check_backend_health; then
-        # 启动前端开发服务器
+        # 启动前端开发服务器 (本地方式，避免与Docker冲突)
         if [ -d "$FRONTEND_DIR" ] && command -v node &> /dev/null; then
             echo -e "${BLUE}启动前端开发服务器...${NC}"
             cd "$FRONTEND_DIR"
             
-            # 安装依赖
-            if [ ! -d "node_modules" ]; then
-                echo -e "${YELLOW}安装前端依赖...${NC}"
-                if command -v yarn &> /dev/null; then
+            # 检查并安装依赖
+            if [ ! -d "node_modules" ] || [ "package.json" -nt "node_modules" ]; then
+                echo -e "${YELLOW}安装/更新前端依赖...${NC}"
+                if command -v pnpm &> /dev/null; then
+                    pnpm install
+                elif command -v yarn &> /dev/null; then
                     yarn install
                 else
                     npm install
                 fi
             fi
             
+            # 设置环境变量指向后端API
+            export VITE_API_BASE_URL=http://localhost:8000
+            
             # 启动开发服务器
-            if command -v yarn &> /dev/null; then
+            echo -e "${GREEN}启动前端开发服务器 (http://localhost:5173)...${NC}"
+            if command -v pnpm &> /dev/null; then
+                pnpm dev
+            elif command -v yarn &> /dev/null; then
                 yarn dev
             else
                 npm run dev
             fi
         else
-            echo -e "${YELLOW}前端开发环境不可用，请访问 http://localhost:8000${NC}"
+            echo -e "${YELLOW}前端开发环境不可用，请手动进入 frontend 目录运行 npm run dev${NC}"
+            echo -e "${BLUE}或访问后端服务: http://localhost:8000${NC}"
         fi
     else
         echo -e "${RED}无法启动前端，后端服务未就绪${NC}"
@@ -123,15 +131,26 @@ start_dev() {
 start_prod() {
     echo -e "${YELLOW}启动生产环境...${NC}"
     
-    if [ -f "docker-compose.frontend.yml" ]; then
-        docker-compose -f docker-compose.frontend.yml up -d
+    # 使用完整的 docker-compose.yml 启动所有服务
+    if [ -f "docker-compose.yml" ]; then
+        echo -e "${BLUE}构建并启动所有服务...${NC}"
+        docker-compose up -d --build
+        
+        # 等待服务启动
+        echo -e "${YELLOW}等待服务启动...${NC}"
+        sleep 15
+        
+        # 检查服务状态
+        echo -e "${BLUE}检查服务状态...${NC}"
+        docker-compose ps
         
         echo -e "${GREEN}✓ 生产环境启动完成${NC}"
         echo -e "${BLUE}访问地址:${NC}"
         echo -e "  前端: http://localhost:3000"
         echo -e "  后端: http://localhost:8000"
+        echo -e "  API文档: http://localhost:8000/docs"
     else
-        echo -e "${RED}未找到 docker-compose.frontend.yml 文件${NC}"
+        echo -e "${RED}未找到 docker-compose.yml 文件${NC}"
         exit 1
     fi
 }
@@ -141,13 +160,22 @@ stop_services() {
     echo -e "${YELLOW}停止所有服务...${NC}"
     
     # 停止开发环境
-    if [ -f "docker-compose.yml" ]; then
-        docker-compose down
+    if [ -f "docker-compose.dev.yml" ]; then
+        echo -e "${BLUE}停止开发环境...${NC}"
+        docker-compose -f docker-compose.dev.yml down
     fi
     
     # 停止生产环境
-    if [ -f "docker-compose.frontend.yml" ]; then
-        docker-compose -f docker-compose.frontend.yml down
+    if [ -f "docker-compose.yml" ]; then
+        echo -e "${BLUE}停止生产环境...${NC}"
+        docker-compose down
+    fi
+    
+    # 尝试停止可能在运行的前端开发服务器
+    if command -v pkill &> /dev/null; then
+        pkill -f "vite" 2>/dev/null || true
+        pkill -f "webpack-dev-server" 2>/dev/null || true
+        pkill -f "npm.*dev" 2>/dev/null || true
     fi
     
     echo -e "${GREEN}✓ 所有服务已停止${NC}"
@@ -157,29 +185,39 @@ stop_services() {
 show_status() {
     echo -e "${BLUE}=== 服务状态 ===${NC}"
     
-    if [ -f "docker-compose.yml" ]; then
-        echo -e "${YELLOW}开发环境:${NC}"
-        docker-compose ps
+    if [ -f "docker-compose.dev.yml" ]; then
+        echo -e "${YELLOW}开发环境 (docker-compose.dev.yml):${NC}"
+        docker-compose -f docker-compose.dev.yml ps
     fi
     
-    if [ -f "docker-compose.frontend.yml" ]; then
-        echo -e "${YELLOW}生产环境:${NC}"
-        docker-compose -f docker-compose.frontend.yml ps
+    if [ -f "docker-compose.yml" ]; then
+        echo -e "${YELLOW}生产环境 (docker-compose.yml):${NC}"
+        docker-compose ps
     fi
 }
 
 # 查看日志
 show_logs() {
     local service="${2:-}"
+    local env="${3:-dev}"
     
     echo -e "${BLUE}=== 服务日志 ===${NC}"
     
-    if [ -f "docker-compose.yml" ]; then
+    if [ "$env" = "prod" ] && [ -f "docker-compose.yml" ]; then
         if [ -n "$service" ]; then
             docker-compose logs -f "$service"
         else
             docker-compose logs -f
         fi
+    elif [ -f "docker-compose.dev.yml" ]; then
+        if [ -n "$service" ]; then
+            docker-compose -f docker-compose.dev.yml logs -f "$service"
+        else
+            docker-compose -f docker-compose.dev.yml logs -f
+        fi
+    else
+        echo -e "${RED}未找到对应的 docker-compose 文件${NC}"
+        exit 1
     fi
 }
 

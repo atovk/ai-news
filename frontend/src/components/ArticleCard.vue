@@ -21,7 +21,7 @@
           type="text"
           size="small"
           @click="openOriginal"
-          :icon="ExternalLink"
+          :icon="Link"
         >
           原文
         </el-button>
@@ -69,7 +69,7 @@ import { computed } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   CopyDocument,
-  ExternalLink,
+  Link,
   User,
 } from '@element-plus/icons-vue'
 import type { Article, TodayArticle } from '@/types'

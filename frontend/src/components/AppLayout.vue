@@ -6,7 +6,7 @@
         <!-- Logo 和标题 -->
         <div class="header-left">
           <div class="logo" @click="goHome">
-            <el-icon size="24"><Newspaper /></el-icon>
+            <el-icon size="24"><Reading /></el-icon>
             <span class="logo-text">AI 新闻</span>
           </div>
         </div>
@@ -181,7 +181,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
-  Newspaper,
+  Reading,
   House,
   Calendar,
   Search,
