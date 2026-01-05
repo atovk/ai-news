@@ -92,26 +92,86 @@ async def get_available_languages(
 @router.post("/process")
 async def process_today_articles(
     db: Session = Depends(get_db),
+    content_processor: ContentProcessorService = Depends(get_content_processor),
 ):
-    """手动触发今日文章处理"""
+    """手动触发今日文章处理 - 完整流程"""
     try:
-        # Get unprocessed articles from today
+        from app.services.news_aggregator import NewsAggregatorService
         from datetime import datetime, timedelta
-        from app.models.article import NewsArticle
         
+        # 第1步: 从RSS源获取文章
+        logger.info("开始从RSS源获取文章...")
+        aggregator = NewsAggregatorService(db)
+        fetch_result = await aggregator.fetch_all_sources()
+        
+        # 第2步: 获取今日未处理的文章（限制数量避免超时）
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        articles = (
+        unprocessed_articles = (
             db.query(NewsArticle)
             .filter(NewsArticle.fetched_at >= today_start)
-            .filter(NewsArticle.llm_processing_status != "completed")
+            .filter(
+                (NewsArticle.llm_processing_status == "PENDING") |
+                (NewsArticle.llm_processing_status == None)
+            )
+            .limit(10)  # 限制每次处理10篇，避免超时
             .all()
         )
         
+        logger.info(f"找到 {len(unprocessed_articles)} 篇待处理文章")
+        
+        # 第3步: 使用LLM处理文章
+        processed_count = 0
+        failed_count = 0
+        
+        for article in unprocessed_articles:
+            try:
+                logger.info(f"处理文章: {article.title[:50]}...")
+                article.llm_processing_status = "PROCESSING"
+                db.commit()
+                
+                # 调用LLM处理
+                result = await content_processor.process_article_content(article)
+                
+                # 更新文章数据
+                article.chinese_title = result.get("chinese_title")
+                article.llm_summary = result.get("llm_summary")
+                article.original_language = result.get("original_language")
+                article.category = result.get("category")
+                article.llm_processed_at = result.get("llm_processed_at")
+                article.llm_processing_status = result.get("llm_processing_status")
+                article.is_processed = (result.get("llm_processing_status") == "COMPLETED")
+                
+                # 更新关键词
+                keywords = result.get("keywords", [])
+                if keywords and isinstance(keywords, list):
+                    article.tags = ",".join(keywords[:5])  # 最多5个关键词
+                
+                db.commit()
+                processed_count += 1
+                logger.info(f"文章处理成功: {article.title[:50]}")
+                
+            except Exception as e:
+                logger.error(f"处理文章失败: {article.title[:50]}, 错误: {e}")
+                article.llm_processing_status = "FAILED"
+                db.commit()
+                failed_count += 1
+        
+        # 返回处理结果
         return {
-            "message": "文章处理功能开发中，当前仅返回统计信息",
-            "found_articles": len(articles),
-            "note": "需要实现文章获取和LLM处理功能"
+            "message": "文章处理完成",
+            "fetch_result": {
+                "total_sources": fetch_result["total_sources"],
+                "total_fetched": fetch_result["total_fetched"],
+                "sources": fetch_result["sources_processed"],
+                "errors": fetch_result["errors"]
+            },
+            "processing_result": {
+                "found_articles": len(unprocessed_articles),
+                "processed": processed_count,
+                "failed": failed_count
+            }
         }
+        
     except Exception as e:
         logger.error(f"处理今日文章失败: {e}")
         raise HTTPException(status_code=500, detail=f"处理今日文章失败: {str(e)}")
