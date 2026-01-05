@@ -2,7 +2,7 @@
 应用配置管理
 """
 from typing import Optional
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 
@@ -64,7 +64,58 @@ class Settings(BaseSettings):
     
     # API限流配置
     RATE_LIMIT_PER_MINUTE: int = 60
-    
+
+    @field_validator('SECRET_KEY')
+    @classmethod
+    def validate_secret_key(cls, v: str) -> str:
+        """验证SECRET_KEY不能使用默认值"""
+        if v == "your-secret-key-change-in-production":
+            import warnings
+            warnings.warn(
+                "使用默认SECRET_KEY不安全，请在生产环境中更改！",
+                UserWarning
+            )
+        return v
+
+    @field_validator('OLLAMA_TIMEOUT', 'LLM_ASYNC_TIMEOUT', 'LLM_BATCH_TIMEOUT', 'LLM_SINGLE_TIMEOUT')
+    @classmethod
+    def validate_timeout(cls, v: int) -> int:
+        """验证超时时间必须为正数"""
+        if v <= 0:
+            raise ValueError("超时时间必须大于0")
+        return v
+
+    @field_validator('RATE_LIMIT_PER_MINUTE', 'MAX_ARTICLES_PER_SOURCE', 'BATCH_PROCESS_SIZE')
+    @classmethod
+    def validate_positive_int(cls, v: int) -> int:
+        """验证必须为正整数"""
+        if v <= 0:
+            raise ValueError("该值必须大于0")
+        return v
+
+    @model_validator(mode='after')
+    def validate_llm_config(self) -> 'Settings':
+        """验证LLM配置的完整性"""
+        provider = self.DEFAULT_LLM_PROVIDER.lower()
+
+        if provider == "openai" and not self.OPENAI_API_KEY:
+            raise ValueError("使用OpenAI时必须配置OPENAI_API_KEY")
+
+        if provider == "huoshan" and (not self.HUOSHAN_API_KEY or not self.HUOSHAN_SECRET_KEY):
+            raise ValueError("使用火山引擎时必须配置HUOSHAN_API_KEY和HUOSHAN_SECRET_KEY")
+
+        if provider == "qianwen" and not self.QIANWEN_API_KEY:
+            raise ValueError("使用千问时必须配置QIANWEN_API_KEY")
+
+        # 验证超时时间的合理性
+        if self.LLM_SINGLE_TIMEOUT > self.LLM_ASYNC_TIMEOUT:
+            raise ValueError("LLM_SINGLE_TIMEOUT不应大于LLM_ASYNC_TIMEOUT")
+
+        if self.LLM_ASYNC_TIMEOUT > self.LLM_BATCH_TIMEOUT:
+            raise ValueError("LLM_ASYNC_TIMEOUT不应大于LLM_BATCH_TIMEOUT")
+
+        return self
+
     model_config = ConfigDict(env_file=".env")
 
 
