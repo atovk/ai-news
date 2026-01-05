@@ -4,7 +4,7 @@ LLM 服务管理器 - 实现统一服务入口和回退机制
 from typing import Dict, Type, Any, List
 from app.services.llm_interface import LLMServiceInterface, LLMProvider, LLMProcessingError
 from app.services.llm_config import LLMConfig, LLMProviderConfig
-from app.services.llm_adapters import OllamaAdapter
+from app.services.llm_adapters import OllamaAdapter, OpenAIAdapter, HuoshanAdapter, QianwenAdapter
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,10 +15,9 @@ class LLMAdapterFactory:
     
     _adapters: Dict[LLMProvider, Type[LLMServiceInterface]] = {
         LLMProvider.OLLAMA: OllamaAdapter,
-        # TODO: 添加其他适配器
-        # LLMProvider.OPENAI: OpenAIAdapter,
-        # LLMProvider.HUOSHAN: HuoshanAdapter,
-        # LLMProvider.QIANWEN: QianwenAdapter,
+        LLMProvider.OPENAI: OpenAIAdapter,
+        LLMProvider.HUOSHAN: HuoshanAdapter,
+        LLMProvider.QIANWEN: QianwenAdapter,
     }
     
     @classmethod
