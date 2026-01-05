@@ -1,8 +1,10 @@
 """
 应用配置管理
 """
+import os
+import re
 from typing import Optional
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -53,8 +55,8 @@ class Settings(BaseSettings):
     LLM_SINGLE_TIMEOUT: int = 60  # 单文章处理超时时间（秒）
     
     # 安全配置
-    SECRET_KEY: str = "your-secret-key-change-in-production"
-    ADMIN_PASSWORD: str = "admin123"
+    SECRET_KEY: str = ""
+    ADMIN_PASSWORD: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
