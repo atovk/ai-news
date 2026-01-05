@@ -49,7 +49,10 @@ export const todayApi = {
 // 新闻源 API
 export const sourceApi = {
   // 获取新闻源列表
-  getSources: () => apiClient.get<NewsSource[]>('/sources'),
+  getSources: async () => {
+    const response: any = await apiClient.get('/sources')
+    return response.sources || []
+  },
 
   // 获取新闻源详情
   getSource: (id: number) => apiClient.get<NewsSource>(`/sources/${id}`),
@@ -58,7 +61,10 @@ export const sourceApi = {
 // 分类 API
 export const categoryApi = {
   // 获取分类列表
-  getCategories: () => apiClient.get<Category[]>('/categories'),
+  getCategories: async () => {
+    const response: any = await apiClient.get('/categories')
+    return response.categories || []
+  },
 
   // 获取分类下的文章
   getCategoryArticles: (id: number, params?: {
@@ -72,8 +78,8 @@ export const systemApi = {
   // 健康检查
   healthCheck: () => apiClient.get('/health'),
 
-  // 获取系统统计
-  getStats: () => apiClient.get<Stats>('/stats'),
+  // 获取系统统计 (代理到今日统计)
+  getStats: () => apiClient.get<Stats>('/today/stats'),
 }
 
 // 管理 API

@@ -111,6 +111,26 @@ def import_categories():
     """导入默认分类"""
     db = SessionLocal()
     try:
+        category_service = CategoryService(db)
+        categories = category_service.ensure_default_categories()
+        
+        print(f"Categories ensured:")
+        for cat in categories:
+            print(f"  - {cat.name}: {cat.description}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error importing categories: {e}")
+        return False
+    finally:
+        db.close()
+
+
+def main():
+    """主函数"""
+    print("Importing seed data...")
+    
     success = True
     
     # 导入分类
@@ -129,29 +149,7 @@ def import_categories():
         print("\n✅ Seed data import completed successfully!")
         print("You can now fetch news with the aggregator.")
     else:
-        print("\n❌ nCategories ensured:")
-        for cat in categories:
-            print(f"  - {cat.name}: {cat.description}")
-        
-        return True
-        
-    except Exception as e:
-        print(f"Error importing categories: {e}")
-        return False
-    finally:
-        db.close()
-
-
-def main():
-    """主函数"""
-    print("Importing seed data...")
-    
-    # 导入新闻源
-    if import_news_sources():
-        print("\nSeed data import completed successfully!")
-        print("You can now fetch news with the aggregator.")
-    else:
-        print("\nSeed data import failed!")
+        print("\n❌ Seed data import failed!")
         sys.exit(1)
 
 

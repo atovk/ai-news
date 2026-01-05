@@ -89,6 +89,34 @@ async def get_available_languages(
         raise HTTPException(status_code=500, detail=f"获取语言列表失败: {str(e)}")
 
 
+@router.post("/process")
+async def process_today_articles(
+    db: Session = Depends(get_db),
+):
+    """手动触发今日文章处理"""
+    try:
+        # Get unprocessed articles from today
+        from datetime import datetime, timedelta
+        from app.models.article import NewsArticle
+        
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        articles = (
+            db.query(NewsArticle)
+            .filter(NewsArticle.fetched_at >= today_start)
+            .filter(NewsArticle.llm_processing_status != "completed")
+            .all()
+        )
+        
+        return {
+            "message": "文章处理功能开发中，当前仅返回统计信息",
+            "found_articles": len(articles),
+            "note": "需要实现文章获取和LLM处理功能"
+        }
+    except Exception as e:
+        logger.error(f"处理今日文章失败: {e}")
+        raise HTTPException(status_code=500, detail=f"处理今日文章失败: {str(e)}")
+
+
 @router.get("/llm/health", response_model=LLMHealthResponse)
 async def get_llm_health():
     """获取 LLM 服务健康状态"""

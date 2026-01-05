@@ -1,12 +1,13 @@
 """
 FastAPI 应用主入口
 """
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy.orm import Session
 from app.config import settings
 from app.api.v1 import articles, search, sources, today, admin, categories
-from app.models.database import engine, Base
+from app.models.database import engine, Base, get_db
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -29,8 +30,10 @@ def get_allowed_origins():
         # 开发环境：仅允许本地开发来源
         return [
             "http://localhost:3000",
+            "http://localhost:3001",  # Add Vite dev server port
             "http://localhost:8000",
             "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",  # Add Vite dev server port
             "http://127.0.0.1:8000",
         ]
 
@@ -38,7 +41,7 @@ def get_allowed_origins():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_allowed_origins(),
-    allow_credentials=True,
+    allow_credentials=False,  # Fixed: cannot use True with allow_origins=["*"] or localhost
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -71,6 +74,22 @@ async def health_check():
         "app_name": settings.APP_NAME,
         "version": settings.VERSION
     }
+
+
+@app.get("/api/v1/stats")
+async def get_stats(db: Session = Depends(get_db)):
+    """获取系统统计信息（代理到今日统计）"""
+    from app.services.today_service import TodayService
+    from app.services.content_processor import ContentProcessorService
+    from app.core.llm_factory import get_llm_manager
+    
+    try:
+        llm_mgr = get_llm_manager()
+        content_processor = ContentProcessorService(llm_mgr)
+        today_service = TodayService(db, content_processor)
+        return today_service.get_today_stats()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.exception_handler(Exception)
