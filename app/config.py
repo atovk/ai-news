@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     REDIS_ENABLED: bool = False
     
     # LLM配置
-    OLLAMA_BASE_URL: str = "http://192.168.11.12:11434"
+    OLLAMA_BASE_URL: str
     OLLAMA_MODEL: str = "qwen3:latest"
     OLLAMA_TIMEOUT: int = 60
     
