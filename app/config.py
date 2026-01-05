@@ -59,6 +59,9 @@ class Settings(BaseSettings):
     ADMIN_PASSWORD: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # CORS配置
+    ALLOWED_ORIGINS: str = ""  # 逗号分隔的允许来源列表，空字符串表示仅允许本地开发
     
     # 新闻抓取配置
     DEFAULT_FETCH_INTERVAL: int = 3600  # 1小时

@@ -19,10 +19,25 @@ app = FastAPI(
     debug=settings.DEBUG
 )
 
+# 配置 CORS 允许的来源
+def get_allowed_origins():
+    """获取允许的 CORS 来源列表"""
+    if settings.ALLOWED_ORIGINS:
+        # 生产环境：使用配置的来源列表
+        return [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",") if origin.strip()]
+    else:
+        # 开发环境：仅允许本地开发来源
+        return [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8000",
+        ]
+
 # 添加 CORS 中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 生产环境应该限制域名
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
