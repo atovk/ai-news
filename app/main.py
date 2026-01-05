@@ -5,7 +5,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from app.config import settings
-from app.api.v1 import articles, search, sources, today, admin
+from app.api.v1 import articles, search, sources, today, admin, categories
 from app.models.database import engine, Base
 
 # 创建数据库表
@@ -47,6 +47,7 @@ app.add_middleware(
 app.include_router(articles.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(sources.router, prefix="/api/v1")
+app.include_router(categories.router, prefix="/api/v1")
 app.include_router(today.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
 

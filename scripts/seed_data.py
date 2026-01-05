@@ -11,6 +11,7 @@ sys.path.insert(0, str(project_root))
 
 from app.models.database import SessionLocal
 from app.services.source_service import SourceService
+from app.services.category_service import CategoryService
 from app.schemas.source import SourceCreate
 
 
@@ -101,6 +102,41 @@ def import_news_sources():
         
     except Exception as e:
         print(f"Error importing news sources: {e}")
+        return False
+    finally:
+        db.close()
+
+
+def import_categories():
+    """导入默认分类"""
+    db = SessionLocal()
+    try:
+    success = True
+    
+    # 导入分类
+    print("\n=== Importing Categories ===")
+    if not import_categories():
+        success = False
+        print("Categories import failed!")
+    
+    # 导入新闻源
+    print("\n=== Importing News Sources ===")
+    if not import_news_sources():
+        success = False
+        print("News sources import failed!")
+    
+    if success:
+        print("\n✅ Seed data import completed successfully!")
+        print("You can now fetch news with the aggregator.")
+    else:
+        print("\n❌ nCategories ensured:")
+        for cat in categories:
+            print(f"  - {cat.name}: {cat.description}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"Error importing categories: {e}")
         return False
     finally:
         db.close()
