@@ -61,9 +61,15 @@ class ContentProcessorService:
         # 提取关键词
         keywords = await self.llm_manager.extract_keywords(content, max_keywords=5)
         
-        # 文章分类
         categories = ["科技", "财经", "体育", "娱乐", "政治", "社会", "教育", "健康", "其他"]
-        category = await self.llm_manager.categorize_article(title, content, categories)
+        raw_category = await self.llm_manager.categorize_article(title, content, categories)
+        
+        # Clean up category - try to find one of the valid categories in the output
+        category = "其他"
+        for cat in categories:
+            if cat in raw_category:
+                category = cat
+                break
         
         return {
             "chinese_title": chinese_title,

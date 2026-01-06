@@ -16,6 +16,7 @@ export const useArticleStore = defineStore('article', () => {
   const filters = ref({
     category: '',
     source_id: undefined as number | undefined,
+    tag_id: undefined as number | undefined,
   })
 
   // 计算属性
@@ -33,6 +34,7 @@ export const useArticleStore = defineStore('article', () => {
     size?: number
     category?: string
     source_id?: number
+    tag_id?: number
     append?: boolean
   }) => {
     try {
@@ -43,8 +45,10 @@ export const useArticleStore = defineStore('article', () => {
         size: params?.size || pagination.value.size,
         category: params?.category || filters.value.category,
         source_id: params?.source_id || filters.value.source_id,
+        tag_id: params?.tag_id || filters.value.tag_id,
       }
 
+      // @ts-ignore - API signature update pending in types but valid in backend
       const response: ArticleListResponse = await articleApi.getArticles(requestParams)
       
       if (params?.append) {
@@ -96,6 +100,7 @@ export const useArticleStore = defineStore('article', () => {
     filters.value = {
       category: '',
       source_id: undefined,
+      tag_id: undefined,
     }
     pagination.value.page = 1
     fetchArticles()

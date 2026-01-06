@@ -46,14 +46,14 @@ class OllamaAdapter(LLMServiceInterface):
     
     async def extract_keywords(self, content: str, max_keywords: int = 5, **kwargs) -> List[str]:
         """提取关键词"""
-        prompt = f"请从以下文本中提取{max_keywords}个最重要的关键词，以逗号分隔：\n\n{content}"
+        prompt = f"请从以下文本中提取{max_keywords}个最重要的关键词（如技术名词、实体、核心话题），只返回关键词列表，以逗号分隔，不要包含其他说明：\n\n{content}"
         response = await self._call_ollama(prompt)
         return [kw.strip() for kw in response.split(',')][:max_keywords]
     
     async def categorize_article(self, title: str, content: str, categories: List[str], **kwargs) -> str:
         """文章分类"""
         categories_str = "、".join(categories)
-        prompt = f"请将以下文章分类到最合适的类别中，候选类别：{categories_str}\n\n标题：{title}\n\n内容：{content[:500]}\n\n分类："
+        prompt = f"请将以下文章分类到最合适的类别中，候选类别：{categories_str}。\n\n只返回分类名称（如“科技”），不要包含任何其他文字、标点或解释。\n\n标题：{title}\n\n内容：{content[:500]}\n\n分类："
         response = await self._call_ollama(prompt)
         return response.strip()
     

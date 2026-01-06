@@ -47,6 +47,14 @@ class NewsAggregatorService:
         # 逐个处理源（避免并发问题）
         for source in sources:
             try:
+                # Check if we should fetch based on fetch_interval
+                if source.last_fetch_time:
+                    delta = datetime.utcnow() - source.last_fetch_time
+                    interval_minutes = float(source.fetch_interval) if source.fetch_interval else 60.0
+                    if delta.total_seconds() < interval_minutes * 60:
+                        logger.debug(f"Skipping source {source.name}, last fetch was {delta.total_seconds()/60:.1f} min ago (interval: {interval_minutes} min)")
+                        continue
+                
                 articles = await self.fetch_source(source)
                 sources_processed.append({
                     "source_id": source.id,
@@ -114,6 +122,9 @@ class NewsAggregatorService:
                 logger.debug(f"文章已存在: {article_data.get('title')}")
                 return None
             
+            # Extract tags list
+            tags_list = article_data.get("tags") or []
+            
             # 创建新文章
             article = NewsArticle(
                 title=article_data.get("title", "")[:500],  # 限制长度
@@ -126,12 +137,18 @@ class NewsAggregatorService:
                 fetched_at=datetime.utcnow(),
                 is_processed=False,
                 llm_processing_status="PENDING",  # Use uppercase for enum
-                tags=",".join(article_data.get("tags", [])[:10])  # 限制标签数量
+                tags=",".join(tags_list[:10])  # 限制标签数量，保持文本字段兼容
             )
             
             self.db.add(article)
             self.db.commit()
             self.db.refresh(article)
+            
+            # Link tags to article using TagService
+            if tags_list:
+                from app.services.tag_service import TagService
+                tag_service = TagService(self.db)
+                tag_service.link_tags_to_article(article, tags_list)
             
             logger.debug(f"保存新文章: {article.title}")
             return article

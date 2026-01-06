@@ -24,7 +24,8 @@ class ArticleService:
         skip: int = 0, 
         limit: int = 20,
         category: Optional[str] = None,
-        source_id: Optional[int] = None
+        source_id: Optional[int] = None,
+        tag_id: Optional[int] = None
     ) -> List[NewsArticle]:
         """获取文章列表"""
         query = self.db.query(NewsArticle)
@@ -34,13 +35,18 @@ class ArticleService:
         
         if source_id:
             query = query.filter(NewsArticle.source_id == source_id)
+            
+        if tag_id:
+            from app.models.tag import ArticleTag
+            query = query.join(NewsArticle.article_tags).filter(ArticleTag.tag_id == tag_id)
         
         return query.order_by(desc(NewsArticle.published_at)).offset(skip).limit(limit).all()
     
     def get_articles_count(
         self, 
         category: Optional[str] = None,
-        source_id: Optional[int] = None
+        source_id: Optional[int] = None,
+        tag_id: Optional[int] = None
     ) -> int:
         """获取文章总数"""
         query = self.db.query(NewsArticle)
@@ -50,6 +56,10 @@ class ArticleService:
         
         if source_id:
             query = query.filter(NewsArticle.source_id == source_id)
+
+        if tag_id:
+            from app.models.tag import ArticleTag
+            query = query.join(NewsArticle.article_tags).filter(ArticleTag.tag_id == tag_id)
         
         return query.count()
     

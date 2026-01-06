@@ -84,11 +84,7 @@
             </el-button>
           </div>
 
-          <el-table
-            :data="sources"
-            v-loading="sourcesLoading"
-            stripe
-          >
+          <el-table :data="sources" v-loading="sourcesLoading" stripe>
             <el-table-column prop="id" label="ID" width="80" />
             <el-table-column prop="name" label="名称" />
             <el-table-column prop="url" label="URL" />
@@ -96,14 +92,22 @@
             <el-table-column label="状态" width="100">
               <template #default="{ row }">
                 <el-tag :type="row.is_active ? 'success' : 'danger'">
-                  {{ row.is_active ? '活跃' : '停用' }}
+                  {{ row.is_active ? "活跃" : "停用" }}
                 </el-tag>
               </template>
             </el-table-column>
-            <el-table-column prop="fetch_interval" label="抓取间隔(分钟)" width="120" />
+            <el-table-column
+              prop="fetch_interval"
+              label="抓取间隔(分钟)"
+              width="120"
+            />
             <el-table-column label="最后抓取时间" width="160">
               <template #default="{ row }">
-                {{ row.last_fetch_time ? formatDate(row.last_fetch_time) : '未抓取' }}
+                {{
+                  row.last_fetch_time
+                    ? formatDate(row.last_fetch_time)
+                    : "未抓取"
+                }}
               </template>
             </el-table-column>
             <el-table-column label="操作" width="200">
@@ -115,11 +119,7 @@
                 >
                   立即抓取
                 </el-button>
-                <el-button
-                  size="small"
-                  type="primary"
-                  @click="editSource(row)"
-                >
+                <el-button size="small" type="primary" @click="editSource(row)">
                   编辑
                 </el-button>
                 <el-button
@@ -138,7 +138,17 @@
       <!-- 系统监控 -->
       <el-tab-pane label="系统监控" name="monitor">
         <div class="system-monitor">
-          <h3>系统监控</h3>
+          <div class="section-header">
+            <h3>系统监控</h3>
+            <el-button
+              type="primary"
+              @click="handleManualProcess"
+              :loading="processLoading"
+            >
+              <el-icon><Refresh /></el-icon>
+              手动触发今日处理
+            </el-button>
+          </div>
           <el-descriptions :column="2" border>
             <el-descriptions-item label="系统状态">
               <el-tag type="success">正常运行</el-tag>
@@ -164,11 +174,7 @@
     </el-tabs>
 
     <!-- 添加新闻源对话框 -->
-    <el-dialog
-      v-model="showAddSourceDialog"
-      title="添加新闻源"
-      width="500px"
-    >
+    <el-dialog v-model="showAddSourceDialog" title="添加新闻源" width="500px">
       <el-form
         ref="sourceFormRef"
         :model="sourceForm"
@@ -212,11 +218,7 @@
     </el-dialog>
 
     <!-- 编辑新闻源对话框 -->
-    <el-dialog
-      v-model="showEditSourceDialog"
-      title="编辑新闻源"
-      width="500px"
-    >
+    <el-dialog v-model="showEditSourceDialog" title="编辑新闻源" width="500px">
       <el-form
         ref="editSourceFormRef"
         :model="editSourceForm"
@@ -262,178 +264,195 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ref, onMounted } from "vue";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   Setting,
   Document,
   Check,
   Plus,
   Link,
-} from '@element-plus/icons-vue'
-import { adminApi, systemApi } from '@/api'
-import { formatDate } from '@/utils'
-import type { NewsSource, Stats } from '@/types'
+  Refresh,
+} from "@element-plus/icons-vue";
+import { adminApi, systemApi, todayApi } from "@/api";
+import { formatDate } from "@/utils";
+import type { NewsSource, Stats } from "@/types";
 
 // 响应式状态
-const activeTab = ref('sources')
-const stats = ref<Stats | null>(null)
-const sources = ref<NewsSource[]>([])
-const sourcesLoading = ref(false)
-const fetchingSourceId = ref<number | null>(null)
-const submitLoading = ref(false)
+const activeTab = ref("sources");
+const stats = ref<Stats | null>(null);
+const sources = ref<NewsSource[]>([]);
+const sourcesLoading = ref(false);
+const fetchingSourceId = ref<number | null>(null);
+const submitLoading = ref(false);
 
 // 表单状态
-const showAddSourceDialog = ref(false)
-const showEditSourceDialog = ref(false)
-const sourceFormRef = ref()
-const editSourceFormRef = ref()
+const showAddSourceDialog = ref(false);
+const showEditSourceDialog = ref(false);
+const sourceFormRef = ref();
+const editSourceFormRef = ref();
 const sourceForm = ref({
-  name: '',
-  url: '',
-  source_type: 'rss',
+  name: "",
+  url: "",
+  source_type: "rss",
   fetch_interval: 60,
   is_active: true,
-})
+});
 const editSourceForm = ref({
   id: 0,
-  name: '',
-  url: '',
-  source_type: 'rss',
+  name: "",
+  url: "",
+  source_type: "rss",
   fetch_interval: 60,
   is_active: true,
-})
+});
 
 // 表单验证规则
 const sourceRules = {
-  name: [
-    { required: true, message: '请输入新闻源名称', trigger: 'blur' }
-  ],
+  name: [{ required: true, message: "请输入新闻源名称", trigger: "blur" }],
   url: [
-    { required: true, message: '请输入URL', trigger: 'blur' },
-    { type: 'url', message: '请输入有效的URL', trigger: 'blur' }
+    { required: true, message: "请输入URL", trigger: "blur" },
+    { type: "url", message: "请输入有效的URL", trigger: "blur" },
   ],
-  source_type: [
-    { required: true, message: '请选择类型', trigger: 'change' }
-  ],
-}
+  source_type: [{ required: true, message: "请选择类型", trigger: "change" }],
+};
 
 // 生命周期
 onMounted(async () => {
-  await loadInitialData()
-})
+  await loadInitialData();
+});
 
 // 方法
 const loadInitialData = async () => {
-  await Promise.all([
-    loadStats(),
-    loadSources(),
-  ])
-}
+  await Promise.all([loadStats(), loadSources()]);
+};
 
 const loadStats = async () => {
   try {
-    stats.value = await systemApi.getStats()
+    stats.value = await systemApi.getStats();
   } catch (error) {
-    console.error('Failed to load stats:', error)
+    console.error("Failed to load stats:", error);
   }
-}
+};
 
 const loadSources = async () => {
   try {
-    sourcesLoading.value = true
-    sources.value = await adminApi.sources.list()
+    sourcesLoading.value = true;
+    const response = await adminApi.sources.list();
+    // @ts-ignore
+    sources.value = response.sources || response;
   } catch (error) {
-    console.error('Failed to load sources:', error)
-    ElMessage.error('加载新闻源失败')
+    console.error("Failed to load sources:", error);
+    ElMessage.error("加载新闻源失败");
   } finally {
-    sourcesLoading.value = false
+    sourcesLoading.value = false;
   }
-}
+};
 
 const fetchSource = async (id: number) => {
   try {
-    fetchingSourceId.value = id
-    await adminApi.sources.fetch(id)
-    ElMessage.success('抓取任务已启动')
-    await loadSources()
+    fetchingSourceId.value = id;
+    await adminApi.sources.fetch(id);
+    ElMessage.success("抓取任务已启动");
+    await loadSources();
   } catch (error) {
-    console.error('Failed to fetch source:', error)
-    ElMessage.error('启动抓取失败')
+    console.error("Failed to fetch source:", error);
+    ElMessage.error("启动抓取失败");
   } finally {
-    fetchingSourceId.value = null
+    fetchingSourceId.value = null;
   }
-}
+};
 
 const editSource = (source: NewsSource) => {
-  editSourceForm.value = { ...source }
-  showEditSourceDialog.value = true
-}
+  editSourceForm.value = { ...source };
+  showEditSourceDialog.value = true;
+  showEditSourceDialog.value = true;
+};
+
+const processLoading = ref(false);
+
+const handleManualProcess = async () => {
+  try {
+    processLoading.value = true;
+    await todayApi.processTodayArticles();
+    ElMessage.success("处理任务已启动，请稍后查看结果");
+
+    // 延迟刷新数据
+    setTimeout(() => {
+      loadStats();
+    }, 2000);
+  } catch (error) {
+    console.error("Failed to trigger process:", error);
+    ElMessage.error("启动处理失败");
+  } finally {
+    processLoading.value = false;
+  }
+};
 
 const deleteSource = async (id: number) => {
   try {
-    await ElMessageBox.confirm('确定要删除这个新闻源吗？', '确认删除', {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    })
-    
-    await adminApi.sources.delete(id)
-    ElMessage.success('删除成功')
-    await loadSources()
+    await ElMessageBox.confirm("确定要删除这个新闻源吗？", "确认删除", {
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+      type: "warning",
+    });
+
+    await adminApi.sources.delete(id);
+    ElMessage.success("删除成功");
+    await loadSources();
   } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Failed to delete source:', error)
-      ElMessage.error('删除失败')
+    if (error !== "cancel") {
+      console.error("Failed to delete source:", error);
+      ElMessage.error("删除失败");
     }
   }
-}
+};
 
 const submitSourceForm = async () => {
   try {
-    await sourceFormRef.value.validate()
-    submitLoading.value = true
-    
-    await adminApi.sources.create(sourceForm.value)
-    ElMessage.success('添加成功')
-    showAddSourceDialog.value = false
-    resetSourceForm()
-    await loadSources()
+    await sourceFormRef.value.validate();
+    submitLoading.value = true;
+
+    await adminApi.sources.create(sourceForm.value);
+    ElMessage.success("添加成功");
+    showAddSourceDialog.value = false;
+    resetSourceForm();
+    await loadSources();
   } catch (error) {
-    console.error('Failed to create source:', error)
-    ElMessage.error('添加失败')
+    console.error("Failed to create source:", error);
+    ElMessage.error("添加失败");
   } finally {
-    submitLoading.value = false
+    submitLoading.value = false;
   }
-}
+};
 
 const submitEditSourceForm = async () => {
   try {
-    await editSourceFormRef.value.validate()
-    submitLoading.value = true
-    
-    const { id, ...data } = editSourceForm.value
-    await adminApi.sources.update(id, data)
-    ElMessage.success('更新成功')
-    showEditSourceDialog.value = false
-    await loadSources()
+    await editSourceFormRef.value.validate();
+    submitLoading.value = true;
+
+    const { id, ...data } = editSourceForm.value;
+    await adminApi.sources.update(id, data);
+    ElMessage.success("更新成功");
+    showEditSourceDialog.value = false;
+    await loadSources();
   } catch (error) {
-    console.error('Failed to update source:', error)
-    ElMessage.error('更新失败')
+    console.error("Failed to update source:", error);
+    ElMessage.error("更新失败");
   } finally {
-    submitLoading.value = false
+    submitLoading.value = false;
   }
-}
+};
 
 const resetSourceForm = () => {
   sourceForm.value = {
-    name: '',
-    url: '',
-    source_type: 'rss',
+    name: "",
+    url: "",
+    source_type: "rss",
     fetch_interval: 60,
     is_active: true,
-  }
-}
+  };
+};
 </script>
 
 <style scoped>

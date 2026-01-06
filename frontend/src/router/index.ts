@@ -56,6 +56,35 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/login',
+    name: 'login',
+    component: () => import('@/views/auth/LoginPage.vue'),
+    meta: {
+      title: '登录',
+      guestOnly: true,
+    },
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('@/views/auth/RegisterPage.vue'),
+    meta: {
+      title: '注册',
+      guestOnly: true,
+    },
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    // We haven't created ProfilePage yet, but we will. Use admin as placeholder or create empty.
+    // Let's use basic auth check for now.
+    component: () => import('@/views/auth/LoginPage.vue'), // Placeholder
+    meta: {
+      title: '个人中心',
+      requiresAuth: true,
+    },
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
     component: () => import('@/views/NotFoundPage.vue'),
@@ -79,7 +108,9 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, from, next) => {
+import { useAuthStore } from '@/stores/auth'
+
+router.beforeEach(async (to, from, next) => {
   // 设置页面标题
   if (to.meta?.title) {
     document.title = `${to.meta.title} - AI 新闻`
@@ -87,11 +118,29 @@ router.beforeEach((to, from, next) => {
     document.title = 'AI 新闻'
   }
 
+  const authStore = useAuthStore()
+  
+  // 如果有 token 但用户信息未加载，尝试加载
+  if (authStore.isAuthenticated && !authStore.user) {
+    await authStore.fetchCurrentUser()
+  }
+
   // 权限检查
   if (to.meta?.requiresAuth) {
-    // TODO: 实现权限检查逻辑
-    // 目前暂时允许所有访问
-    next()
+    if (!authStore.isAuthenticated) {
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath },
+      })
+    } else {
+      next()
+    }
+  } else if (to.meta?.guestOnly) {
+    if (authStore.isAuthenticated) {
+      next('/')
+    } else {
+      next()
+    }
   } else {
     next()
   }

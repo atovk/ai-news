@@ -18,6 +18,7 @@ async def get_articles(
     size: int = Query(20, ge=1, le=100, description="每页数量"),
     category: str = Query(None, description="分类筛选"),
     source_id: int = Query(None, description="新闻源ID筛选"),
+    tag_id: int = Query(None, description="标签ID筛选"),
     db: Session = Depends(get_db)
 ):
     """获取新闻文章列表"""
@@ -28,12 +29,14 @@ async def get_articles(
         skip=skip, 
         limit=size, 
         category=category,
-        source_id=source_id
+        source_id=source_id,
+        tag_id=tag_id
     )
     
     total = article_service.get_articles_count(
         category=category,
-        source_id=source_id
+        source_id=source_id,
+        tag_id=tag_id
     )
     
     return ArticleListResponse(

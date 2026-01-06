@@ -1,3 +1,15 @@
+export interface Tag {
+  id: number
+  name: string
+  slug?: string
+  article_count: number
+}
+
+export interface ArticleTag {
+  tag: Tag
+  relevance_score: number
+}
+
 // 新闻文章类型
 export interface Article {
   id: number
@@ -10,13 +22,18 @@ export interface Article {
   fetched_at: string
   is_processed: boolean
   category?: string
-  tags: string[]
+  tags: ArticleTag[]
   chinese_title?: string
   llm_summary?: string
   original_language?: string
   llm_processed_at?: string
   llm_processing_status: 'pending' | 'processing' | 'completed' | 'failed'
   source: NewsSource
+  // Engagement metrics
+  view_count: number
+  like_count: number
+  share_count: number
+  trending_score: number
 }
 
 // 今日文章视图类型
@@ -31,6 +48,8 @@ export interface TodayArticle {
   llm_summary: string
   original_language: string
   tags: string[]
+  is_recommended?: boolean
+  recommendation_score?: number
 }
 
 // 新闻源类型

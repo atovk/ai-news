@@ -37,31 +37,84 @@ class TodayService:
         page: int = 1,
         size: int = 20,
         source: Optional[str] = None,
-        language: Optional[str] = None
+        language: Optional[str] = None,
+        user_id: Optional[int] = None
     ) -> TodayArticleListResponse:
-        """获取今日文章列表（仅显示已处理的文章）"""
+        """
+        Get today's articles.
+        If user_id is provided, sort by personalization score (UserTagPreference).
+        """
+        from app.models.tag import ArticleTag, UserTagPreference
         
-        # 构建基础查询 - 只显示已完成LLM处理的文章
+        # Base query
         query = self.db.query(NewsArticle).filter(
             func.date(NewsArticle.published_at) == date.today(),
             NewsArticle.llm_processing_status == LLMProcessingStatus.COMPLETED
         )
-        
-        # 添加筛选条件
+
         if source:
             query = query.join(NewsSource).filter(NewsSource.name == source)
-        
         if language:
             query = query.filter(NewsArticle.original_language == language)
-        
-        # 获取总数
+            
         total = query.count()
         
-        # 分页和排序
-        articles = query.order_by(NewsArticle.published_at.desc())\
-                       .offset((page - 1) * size)\
-                       .limit(size)\
-                       .all()
+        if user_id:
+            # Personalization Sort
+            
+            # Fetch user tag preferences for this user
+            user_prefs = self.db.query(UserTagPreference).filter(
+                UserTagPreference.user_id == user_id
+            ).all()
+            pref_map = {p.tag_id: p.preference_score for p in user_prefs}
+            
+            # Use eager loading for article_tags
+            from sqlalchemy.orm import joinedload
+            query = query.options(joinedload(NewsArticle.article_tags))
+            
+            # Fetch ALL today's articles
+            # Note: For larger datasets, we should do this scoring in SQL,
+            # but for "Today's" view (usually <100 items), Python side is fine.
+            all_candidates = query.all()
+            
+            if not all_candidates:
+                return TodayArticleListResponse(total=0, page=page, size=size, articles=[])
+
+            # Score articles
+            scored_articles = []
+            for art in all_candidates:
+                score = 0
+                for at in art.article_tags:
+                    if at.tag_id in pref_map:
+                        pref_val = pref_map[at.tag_id]
+                        # (Pref - 5.0) * Relevance
+                        score += (pref_val - 5.0) * (at.relevance_score or 1.0)
+                
+                scored_articles.append((art, score))
+            
+            # Sort by score desc, then published_at desc
+            scored_articles.sort(key=lambda x: (x[1], x[0].published_at), reverse=True)
+            
+            # Paginate
+            start = (page - 1) * size
+            end = start + size
+            articles = []
+            rec_scores = {}
+            
+            for art, score in scored_articles[start:end]:
+                articles.append(art)
+                rec_scores[art.id] = score
+            
+        else:
+            # Standard Sort - Optimization: Eager Load
+            from sqlalchemy.orm import joinedload
+            articles = query.options(joinedload(NewsArticle.article_tags))\
+                           .order_by(NewsArticle.published_at.desc())\
+                           .offset((page - 1) * size)\
+                           .limit(size)\
+                           .all()
+            rec_scores = {}
+
         
         # 转换为视图模型
         article_views = []
@@ -84,7 +137,9 @@ class TodayService:
                     published_at=article.published_at,
                     llm_summary=article.llm_summary or "暂无摘要",
                     original_language=article.original_language or "unknown",
-                    tags=tags
+                    tags=tags,
+                    is_recommended=(rec_scores.get(article.id, 0) > 0.5), # Simple threshold
+                    recommendation_score=rec_scores.get(article.id, 0)
                 )
                 article_views.append(article_view)
             except Exception as e:

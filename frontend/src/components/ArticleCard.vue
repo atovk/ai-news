@@ -2,11 +2,16 @@
   <div class="article-card">
     <div class="article-header">
       <div class="article-meta">
-        <el-tag size="small" :type="getProcessingStatusType(article.llm_processing_status)">
+        <el-tag
+          size="small"
+          :type="getProcessingStatusType(article.llm_processing_status)"
+        >
           {{ getProcessingStatusText(article.llm_processing_status) }}
         </el-tag>
         <span class="article-source">{{ article.source?.name }}</span>
-        <span class="article-time">{{ formatRelativeTime(article.published_at) }}</span>
+        <span class="article-time">{{
+          formatRelativeTime(article.published_at)
+        }}</span>
       </div>
       <div class="article-actions">
         <el-button
@@ -17,12 +22,7 @@
         >
           复制链接
         </el-button>
-        <el-button
-          type="text"
-          size="small"
-          @click="openOriginal"
-          :icon="Link"
-        >
+        <el-button type="text" size="small" @click="openOriginal" :icon="Link">
           原文
         </el-button>
       </div>
@@ -32,20 +32,20 @@
       <h3 class="article-title">
         {{ displayTitle }}
       </h3>
-      
+
       <div class="article-summary" v-if="displaySummary">
         {{ displaySummary }}
       </div>
 
       <div class="article-tags" v-if="article.tags && article.tags.length > 0">
         <el-tag
-          v-for="tag in article.tags.slice(0, 5)"
-          :key="tag"
+          v-for="item in article.tags.slice(0, 5)"
+          :key="item.tag.id"
           size="small"
           type="info"
           effect="plain"
         >
-          {{ tag }}
+          {{ item.tag.name }}
         </el-tag>
       </div>
     </div>
@@ -60,19 +60,30 @@
           {{ getLanguageName(article.original_language) }}
         </el-tag>
       </div>
+
+      <div class="article-metrics" v-if="'view_count' in article">
+        <span class="metric-item" title="阅读">
+          <el-icon><View /></el-icon>
+          {{ article.view_count || 0 }}
+        </span>
+        <!-- Likes and Shares could be added here similarly -->
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
-import { ElMessage } from 'element-plus'
+import { computed } from "vue";
+import { ElMessage } from "element-plus";
 import {
   CopyDocument,
   Link,
   User,
-} from '@element-plus/icons-vue'
-import type { Article, TodayArticle } from '@/types'
+  View,
+  Star,
+  Share,
+} from "@element-plus/icons-vue";
+import type { Article, TodayArticle } from "@/types";
 import {
   formatRelativeTime,
   getLanguageName,
@@ -80,14 +91,14 @@ import {
   getProcessingStatusType,
   copyToClipboard,
   truncateText,
-} from '@/utils'
+} from "@/utils";
 
 interface Props {
-  article: Article | TodayArticle
-  clickable?: boolean
-  showSummary?: boolean
-  maxTitleLength?: number
-  maxSummaryLength?: number
+  article: Article | TodayArticle;
+  clickable?: boolean;
+  showSummary?: boolean;
+  maxTitleLength?: number;
+  maxSummaryLength?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -95,58 +106,59 @@ const props = withDefaults(defineProps<Props>(), {
   showSummary: true,
   maxTitleLength: 100,
   maxSummaryLength: 200,
-})
+});
 
 const emit = defineEmits<{
-  click: [article: Article | TodayArticle]
-}>()
+  click: [article: Article | TodayArticle];
+}>();
 
 // 计算显示的标题
 const displayTitle = computed(() => {
-  if ('chinese_title' in props.article && props.article.chinese_title) {
-    return truncateText(props.article.chinese_title, props.maxTitleLength)
+  if ("chinese_title" in props.article && props.article.chinese_title) {
+    return truncateText(props.article.chinese_title, props.maxTitleLength);
   }
-  const title = 'original_title' in props.article 
-    ? props.article.original_title 
-    : props.article.title
-  return truncateText(title, props.maxTitleLength)
-})
+  const title =
+    "original_title" in props.article
+      ? props.article.original_title
+      : props.article.title;
+  return truncateText(title, props.maxTitleLength);
+});
 
 // 计算显示的摘要
 const displaySummary = computed(() => {
-  if (!props.showSummary) return ''
-  
-  let summary = ''
-  if ('llm_summary' in props.article && props.article.llm_summary) {
-    summary = props.article.llm_summary
+  if (!props.showSummary) return "";
+
+  let summary = "";
+  if ("llm_summary" in props.article && props.article.llm_summary) {
+    summary = props.article.llm_summary;
   } else if (props.article.summary) {
-    summary = props.article.summary
+    summary = props.article.summary;
   }
-  
-  return summary ? truncateText(summary, props.maxSummaryLength) : ''
-})
+
+  return summary ? truncateText(summary, props.maxSummaryLength) : "";
+});
 
 // 处理点击事件
 const handleClick = () => {
   if (props.clickable) {
-    emit('click', props.article)
+    emit("click", props.article);
   }
-}
+};
 
 // 复制链接
 const copyLink = async () => {
   try {
-    await copyToClipboard(props.article.url)
-    ElMessage.success('链接已复制到剪贴板')
+    await copyToClipboard(props.article.url);
+    ElMessage.success("链接已复制到剪贴板");
   } catch (error) {
-    ElMessage.error('复制失败')
+    ElMessage.error("复制失败");
   }
-}
+};
 
 // 打开原文
 const openOriginal = () => {
-  window.open(props.article.url, '_blank')
-}
+  window.open(props.article.url, "_blank");
+};
 </script>
 
 <style scoped>
@@ -247,6 +259,22 @@ const openOriginal = () => {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
+    gap: 8px;
   }
+}
+
+.article-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.metric-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-color-secondary);
+  font-size: 12px;
 }
 </style>

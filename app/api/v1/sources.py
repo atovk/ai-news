@@ -6,6 +6,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from app.models.database import get_db
 from app.services.source_service import SourceService
+from app.services.news_aggregator import NewsAggregatorService
+from app.models.article import NewsArticle
 from app.schemas.source import Source, SourceCreate, SourceUpdate, SourceListResponse
 
 router = APIRouter(prefix="/sources", tags=["sources"])
@@ -84,3 +86,26 @@ async def delete_source(
     
     if not success:
         raise HTTPException(status_code=404, detail="Source not found")
+
+
+@router.post("/{source_id}/fetch")
+async def fetch_source_endpoint(
+    source_id: int,
+    db: Session = Depends(get_db)
+):
+    """手动抓取指定新闻源"""
+    source_service = SourceService(db)
+    source = source_service.get_source(source_id)
+    
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+    
+    try:
+        aggregator = NewsAggregatorService(db)
+        articles = await aggregator.fetch_source(source)
+        return {
+            "message": f"Successfully fetched {len(articles)} articles",
+            "articles_count": len(articles)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -31,6 +31,13 @@ class ApiClient {
     this.instance.interceptors.request.use(
       (config) => {
         NProgress.start();
+        
+        // Inject token
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        
         return config;
       },
       (error) => {
@@ -48,9 +55,31 @@ class ApiClient {
       (error) => {
         NProgress.done();
 
-        const message =
-          error.response?.data?.message || error.message || "请求失败";
-        ElMessage.error(message);
+        // Handle 401 Unauthorized
+        if (error.response?.status === 401) {
+            // Check if we are already on login page to avoid loops or unnecessary messages
+            if (!window.location.pathname.includes('/login')) {
+                ElMessage.error('Session expired. Please login again.');
+                localStorage.removeItem('access_token');
+                // Redirect to login using window.location since we can't easily access router here
+                // properly without circular dependency or extra setup.
+                // Or use a callback. For now, simple redirect.
+                // window.location.href = '/login'; // Let's avoid hard reload if possible, but safe.
+                // Actually, let's just clear token. The router guard should handle redirect if page requires auth.
+                // But for user experience, better to redirect or let the store handle it.
+                // Since api.ts is low level, clearing storage is safe.
+            }
+        } else {
+            const message =
+            error.response?.data?.detail || 
+            error.response?.data?.message || 
+            error.message || 
+            "请求失败";
+            
+            // Prefer 'detail' from FastAPI
+            
+            ElMessage.error(message);
+        }
 
         return Promise.reject(error);
       }

@@ -2,13 +2,12 @@ import { apiClient } from '@/utils/api'
 import type {
   Article,
   ArticleListResponse,
-  TodayArticle,
   TodayArticleListResponse,
   TodayStats,
   SearchParams,
   NewsSource,
-  Category,
   Stats,
+  Tag,
 } from '@/types'
 
 // 文章 API
@@ -86,11 +85,18 @@ export const systemApi = {
 export const adminApi = {
   // 新闻源管理
   sources: {
-    list: () => apiClient.get<NewsSource[]>('/admin/sources'),
-    create: (data: Partial<NewsSource>) => apiClient.post<NewsSource>('/admin/sources', data),
+    list: () => apiClient.get<NewsSource[]>('/sources'),
+    create: (data: Partial<NewsSource>) => apiClient.post<NewsSource>('/sources', data),
     update: (id: number, data: Partial<NewsSource>) => 
-      apiClient.put<NewsSource>(`/admin/sources/${id}`, data),
-    delete: (id: number) => apiClient.delete(`/admin/sources/${id}`),
-    fetch: (id: number) => apiClient.post(`/admin/sources/${id}/fetch`),
+      apiClient.put<NewsSource>(`/sources/${id}`, data),
+    delete: (id: number) => apiClient.delete(`/sources/${id}`),
+    fetch: (id: number) => apiClient.post(`/sources/${id}/fetch`),
   },
+}
+
+// 标签 API
+export const tagApi = {
+  get: (id: number) => apiClient.get<Tag>(`/tags/${id}`),
+  follow: (id: number) => apiClient.post(`/tags/${id}/follow`),
+  unfollow: (id: number) => apiClient.post(`/tags/${id}/unfollow`),
 }

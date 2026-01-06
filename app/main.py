@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from app.config import settings
-from app.api.v1 import articles, search, sources, today, admin, categories
+from app.api.v1 import articles, search, sources, today, admin, categories, auth, tags
 from app.models.database import engine, Base, get_db
 
 # 创建数据库表
@@ -47,12 +47,28 @@ app.add_middleware(
 )
 
 # 注册路由
+app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(articles.router, prefix="/api/v1")
 app.include_router(search.router, prefix="/api/v1")
 app.include_router(sources.router, prefix="/api/v1")
 app.include_router(categories.router, prefix="/api/v1")
 app.include_router(today.router, prefix="/api/v1")
 app.include_router(admin.router, prefix="/api/v1")
+app.include_router(tags.router, prefix="/api/v1")
+
+
+@app.on_event("startup")
+async def startup_event():
+    """应用启动事件"""
+    from app.core.scheduler import start_scheduler
+    start_scheduler()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """应用关闭事件"""
+    from app.core.scheduler import stop_scheduler
+    stop_scheduler()
 
 
 @app.get("/")

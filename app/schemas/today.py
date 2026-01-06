@@ -7,6 +7,9 @@ from pydantic import BaseModel
 from app.models.article import LLMProcessingStatus
 
 
+from app.schemas.tag import ArticleTagResponse
+from pydantic import BaseModel, Field
+
 class TodayArticleView(BaseModel):
     """今日文章视图模型"""
     id: int
@@ -18,7 +21,9 @@ class TodayArticleView(BaseModel):
     published_at: datetime
     llm_summary: str
     original_language: str
-    tags: List[str] = []
+    tags: List[ArticleTagResponse] = Field(default=[], validation_alias="article_tags")
+    is_recommended: bool = False
+    recommendation_score: float = 0.0
     
     class Config:
         from_attributes = True

@@ -34,6 +34,11 @@ class ArticleUpdate(BaseModel):
     is_processed: Optional[bool] = None
 
 
+from app.schemas.tag import ArticleTagResponse
+from pydantic import BaseModel, HttpUrl, field_validator, ConfigDict, Field
+
+# ... (skipped types)
+
 class Article(ArticleBase):
     """文章响应模式"""
     id: int
@@ -41,15 +46,14 @@ class Article(ArticleBase):
     fetched_at: datetime
     is_processed: bool = False
     
-    @field_validator('tags', mode='before')
-    @classmethod
-    def parse_tags(cls, v):
-        if isinstance(v, str):
-            try:
-                return json.loads(v)
-            except json.JSONDecodeError:
-                return []
-        return v or []
+    # Engagement metrics
+    view_count: int = 0
+    like_count: int = 0
+    share_count: int = 0
+    trending_score: float = 0.0
+    
+    # Map to article_tags relationship
+    tags: List[ArticleTagResponse] = Field(default=[], validation_alias="article_tags")
     
     model_config = ConfigDict(from_attributes=True)
 

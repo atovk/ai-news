@@ -16,9 +16,11 @@ RUN pip install poetry
 RUN poetry config virtualenvs.create false
 
 # 复制依赖配置文件
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
 
 # 安装Python依赖 (不安装当前项目，只安装依赖)
+RUN poetry config virtualenvs.create false
+RUN poetry lock
 RUN poetry install --no-root
 
 # 复制应用代码

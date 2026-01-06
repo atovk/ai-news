@@ -9,18 +9,11 @@
             今日精选
           </h1>
           <p class="page-subtitle">
-            {{ formatDate(new Date(), 'YYYY年MM月DD日') }} - 精心筛选的优质内容
+            {{ formatDate(new Date(), "YYYY年MM月DD日") }} - 精心筛选的优质内容
           </p>
         </div>
         <div class="header-actions">
-          <el-button
-            type="primary"
-            :icon="Refresh"
-            @click="handleManualProcess"
-            :loading="processLoading"
-          >
-            手动处理
-          </el-button>
+          <!-- Actions removed -->
         </div>
       </div>
     </div>
@@ -136,12 +129,16 @@
                 <span class="source-name">{{ item.source_name }}</span>
                 <div class="source-progress">
                   <el-progress
-                    :percentage="getSourcePercentage(item.processed, item.total)"
+                    :percentage="
+                      getSourcePercentage(item.processed, item.total)
+                    "
                     :stroke-width="6"
                     :show-text="false"
                     :color="getProgressColor(item.processed, item.total)"
                   />
-                  <span class="source-count">{{ item.processed }}/{{ item.total }}</span>
+                  <span class="source-count"
+                    >{{ item.processed }}/{{ item.total }}</span
+                  >
                 </div>
               </div>
             </div>
@@ -210,6 +207,26 @@
                     {{ article.source_name }}
                   </el-tag>
                   <el-tag
+                    v-if="article.is_recommended"
+                    size="small"
+                    type="danger"
+                    effect="dark"
+                    class="recommended-tag"
+                  >
+                    <el-icon><Star /></el-icon>
+                    推荐
+                  </el-tag>
+                  <el-tag
+                    v-if="article.is_recommended"
+                    size="small"
+                    type="danger"
+                    effect="dark"
+                    class="recommended-tag"
+                  >
+                    <el-icon><Star /></el-icon>
+                    推荐
+                  </el-tag>
+                  <el-tag
                     size="small"
                     type="warning"
                     effect="plain"
@@ -244,8 +261,11 @@
               <div class="article-content">
                 <h3 class="article-title">{{ article.chinese_title }}</h3>
                 <div class="article-summary">{{ article.llm_summary }}</div>
-                
-                <div class="article-tags" v-if="article.tags && article.tags.length > 0">
+
+                <div
+                  class="article-tags"
+                  v-if="article.tags && article.tags.length > 0"
+                >
                   <el-tag
                     v-for="tag in article.tags.slice(0, 8)"
                     :key="tag"
@@ -286,13 +306,7 @@
               <el-icon><Document /></el-icon>
             </div>
             <div class="empty-state-text">今日暂无已处理的文章</div>
-            <el-button
-              type="primary"
-              @click="handleManualProcess"
-              :loading="processLoading"
-            >
-              手动处理文章
-            </el-button>
+            <!-- Manual process button moved to Admin -->
           </div>
         </div>
       </el-card>
@@ -301,8 +315,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ref, computed, onMounted } from "vue";
+import { ElMessage } from "element-plus";
 import {
   Calendar,
   Refresh,
@@ -316,166 +330,144 @@ import {
   CopyDocument,
   Link,
   User,
-} from '@element-plus/icons-vue'
-import { todayApi } from '@/api'
+  Star,
+} from "@element-plus/icons-vue";
+import { todayApi } from "@/api";
 import {
   formatDate,
   formatRelativeTime,
   getLanguageName,
   copyToClipboard,
-} from '@/utils'
-import type { TodayArticle, TodayStats } from '@/types'
+} from "@/utils";
+import type { TodayArticle, TodayStats } from "@/types";
 
 // 响应式状态
-const loading = ref(false)
-const processLoading = ref(false)
-const articles = ref<TodayArticle[]>([])
-const todayStats = ref<TodayStats | null>(null)
+const loading = ref(false);
+const processLoading = ref(false);
+const articles = ref<TodayArticle[]>([]);
+const todayStats = ref<TodayStats | null>(null);
 const pagination = ref({
   page: 1,
   size: 20,
   total: 0,
-})
+});
 const filters = ref({
-  source: '',
-  language: '',
-})
+  source: "",
+  language: "",
+});
 
 // 计算属性
 const uniqueSources = computed(() => {
-  const sources = new Set(articles.value.map(article => article.source_name))
-  return Array.from(sources)
-})
+  const sources = new Set(articles.value.map((article) => article.source_name));
+  return Array.from(sources);
+});
 
 const uniqueLanguages = computed(() => {
   const languages = new Set(
-    articles.value
-      .map(article => article.original_language)
-      .filter(Boolean)
-  )
-  return Array.from(languages)
-})
+    articles.value.map((article) => article.original_language).filter(Boolean)
+  );
+  return Array.from(languages);
+});
 
 // 生命周期
 onMounted(async () => {
-  await loadInitialData()
-})
+  await loadInitialData();
+});
 
 // 方法
 const loadInitialData = async () => {
   try {
-    await Promise.all([
-      loadTodayStats(),
-      loadTodayArticles(),
-    ])
+    await Promise.all([loadTodayStats(), loadTodayArticles()]);
   } catch (error) {
-    console.error('Failed to load initial data:', error)
-    ElMessage.error('加载数据失败')
+    console.error("Failed to load initial data:", error);
+    ElMessage.error("加载数据失败");
   }
-}
+};
 
 const loadTodayStats = async () => {
   try {
-    todayStats.value = await todayApi.getTodayStats()
+    todayStats.value = await todayApi.getTodayStats();
   } catch (error) {
-    console.error('Failed to load today stats:', error)
+    console.error("Failed to load today stats:", error);
   }
-}
+};
 
 const loadTodayArticles = async () => {
   try {
-    loading.value = true
+    loading.value = true;
     const response = await todayApi.getTodayArticles({
       page: pagination.value.page,
       size: pagination.value.size,
       source: filters.value.source || undefined,
       language: filters.value.language || undefined,
-    })
-    
-    articles.value = response.articles
+    });
+
+    articles.value = response.articles;
     pagination.value = {
       page: response.page,
       size: response.size,
       total: response.total,
-    }
+    };
   } catch (error) {
-    console.error('Failed to load today articles:', error)
-    ElMessage.error('加载今日文章失败')
+    console.error("Failed to load today articles:", error);
+    ElMessage.error("加载今日文章失败");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
-
-const handleManualProcess = async () => {
-  try {
-    processLoading.value = true
-    await todayApi.processTodayArticles()
-    ElMessage.success('处理任务已启动，请稍后刷新页面查看结果')
-    
-    // 延迟刷新数据
-    setTimeout(() => {
-      loadInitialData()
-    }, 3000)
-  } catch (error) {
-    console.error('Failed to process today articles:', error)
-    ElMessage.error('启动处理失败')
-  } finally {
-    processLoading.value = false
-  }
-}
+};
 
 const handleFilterChange = () => {
-  pagination.value.page = 1
-  loadTodayArticles()
-}
+  pagination.value.page = 1;
+  loadTodayArticles();
+};
 
 const resetFilters = () => {
   filters.value = {
-    source: '',
-    language: '',
-  }
-  handleFilterChange()
-}
+    source: "",
+    language: "",
+  };
+  handleFilterChange();
+};
 
 const handleSizeChange = (size: number) => {
-  pagination.value.size = size
-  pagination.value.page = 1
-  loadTodayArticles()
-}
+  pagination.value.size = size;
+  pagination.value.page = 1;
+  loadTodayArticles();
+};
 
 const handleCurrentChange = (page: number) => {
-  pagination.value.page = page
-  loadTodayArticles()
-}
+  pagination.value.page = page;
+  loadTodayArticles();
+};
 
 const copyLink = async (url: string) => {
   try {
-    await copyToClipboard(url)
-    ElMessage.success('链接已复制')
+    await copyToClipboard(url);
+    ElMessage.success("链接已复制");
   } catch (error) {
-    ElMessage.error('复制失败')
+    ElMessage.error("复制失败");
   }
-}
+};
 
 const openOriginal = (url: string) => {
-  window.open(url, '_blank')
-}
+  window.open(url, "_blank");
+};
 
 const getLanguagePercentage = (count: number) => {
-  if (!todayStats.value) return 0
-  return Math.round((count / todayStats.value.total_articles) * 100)
-}
+  if (!todayStats.value) return 0;
+  return Math.round((count / todayStats.value.total_articles) * 100);
+};
 
 const getSourcePercentage = (processed: number, total: number) => {
-  return total > 0 ? Math.round((processed / total) * 100) : 0
-}
+  return total > 0 ? Math.round((processed / total) * 100) : 0;
+};
 
 const getProgressColor = (processed: number, total: number) => {
-  const percentage = getSourcePercentage(processed, total)
-  if (percentage >= 80) return '#67c23a'
-  if (percentage >= 50) return '#e6a23c'
-  return '#f56c6c'
-}
+  const percentage = getSourcePercentage(processed, total);
+  if (percentage >= 80) return "#67c23a";
+  if (percentage >= 50) return "#e6a23c";
+  return "#f56c6c";
+};
 </script>
 
 <style scoped>
@@ -628,6 +620,15 @@ const getProgressColor = (processed: number, total: number) => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+
+.recommended-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(135deg, #f56c6c, #fef0f0);
+  border-color: #f56c6c;
+  color: #fff;
 }
 
 .article-meta {

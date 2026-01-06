@@ -1,10 +1,36 @@
 """
-数据库模型
+Database models package
 """
-from app.models.database import Base, SessionLocal, get_db
+from app.models.database import Base, get_db, SessionLocal, engine
+from app.models.article import NewsArticle, LLMProcessingStatus
 from app.models.source import NewsSource
-from app.models.article import NewsArticle
 from app.models.category import Category
+from app.models.user import User
+from app.models.tag import Tag, ArticleTag, UserTagPreference
+from app.models.interaction import (
+    ReadingHistory,
+    Favorite,
+    AIPromptTemplate,
+    AggregatedTopic,
+    TopicArticle
+)
 
-# 确保所有模型都被导入，以便SQLAlchemy能够正确处理关系
-__all__ = ["Base", "SessionLocal", "get_db", "NewsSource", "NewsArticle", "Category"]
+__all__ = [
+    "Base",
+    "get_db",
+    "SessionLocal",
+    "engine",
+    "NewsArticle",
+    "LLMProcessingStatus",
+    "NewsSource",
+    "Category",
+    "User",
+    "Tag",
+    "ArticleTag",
+    "UserTagPreference",
+    "ReadingHistory",
+    "Favorite",
+    "AIPromptTemplate",
+    "AggregatedTopic",
+    "TopicArticle",
+]

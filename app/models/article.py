@@ -2,7 +2,7 @@
 新闻文章模型
 """
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, ForeignKey, Enum, Float, TIMESTAMP
 from sqlalchemy.orm import relationship
 from app.models.database import Base
 import enum
@@ -44,5 +44,12 @@ class NewsArticle(Base):
         comment="LLM 处理状态"
     )
     
+    # Engagement metrics
+    view_count = Column(Integer, default=0)
+    like_count = Column(Integer, default=0)
+    share_count = Column(Integer, default=0)
+    trending_score = Column(Float, default=0.0)
+    
     # 关系
     source = relationship("NewsSource", back_populates="articles")
+    article_tags = relationship("ArticleTag", back_populates="article", cascade="all, delete-orphan")

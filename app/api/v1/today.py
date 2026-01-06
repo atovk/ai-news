@@ -17,6 +17,8 @@ from app.services.llm_config import LLMConfig, OllamaConfig
 from app.services.llm_interface import LLMProvider
 from app.models.article import NewsArticle
 from app.core.llm_factory import get_llm_manager
+from app.core.deps import get_current_user_optional
+from app.models.user import User
 import logging
 
 logger = logging.getLogger(__name__)
@@ -43,12 +45,16 @@ async def get_today_articles(
     size: int = Query(20, ge=1, le=100, description="每页数量"),
     source: Optional[str] = Query(None, description="筛选特定新闻源"),
     language: Optional[str] = Query(None, description="筛选特定语言"),
+
     today_service: TodayService = Depends(get_today_service),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """获取今日已处理文章列表（仅显示LLM处理完成的文章）"""
+    user_id = current_user.id if current_user else None
+    
     try:
         return today_service.get_today_articles(
-            page=page, size=size, source=source, language=language
+            page=page, size=size, source=source, language=language, user_id=user_id
         )
     except Exception as e:
         logger.error(f"获取今日文章失败: {e}")
@@ -143,8 +149,20 @@ async def process_today_articles(
                 
                 # 更新关键词
                 keywords = result.get("keywords", [])
+                
+                # 获取原有标签 (Source tags)
+                combined_tags = []
+                if article.tags:
+                    combined_tags.extend([t for t in article.tags.split(',') if t.strip()])
+                
                 if keywords and isinstance(keywords, list):
-                    article.tags = ",".join(keywords[:5])  # 最多5个关键词
+                    combined_tags.extend(keywords)
+                
+                if combined_tags:
+                    # 使用 TagService 处理标签关联
+                    from app.services.tag_service import TagService
+                    tag_service = TagService(db)
+                    tag_service.link_tags_to_article(article, combined_tags)
                 
                 db.commit()
                 processed_count += 1

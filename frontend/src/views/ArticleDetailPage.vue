@@ -4,12 +4,7 @@
       <template v-if="article">
         <!-- 返回按钮 -->
         <div class="back-button">
-          <el-button 
-            :icon="ArrowLeft" 
-            @click="goBack"
-            type="text"
-            size="large"
-          >
+          <el-button :icon="ArrowLeft" @click="goBack" type="text" size="large">
             返回
           </el-button>
         </div>
@@ -17,32 +12,26 @@
         <!-- 文章头部 -->
         <div class="article-header">
           <div class="article-meta">
-            <el-tag 
-              size="small" 
+            <el-tag
+              size="small"
               :type="getProcessingStatusType(article.llm_processing_status)"
             >
               {{ getProcessingStatusText(article.llm_processing_status) }}
             </el-tag>
             <span class="article-source">{{ article.source?.name }}</span>
-            <span class="article-time">{{ formatDate(article.published_at) }}</span>
+            <span class="article-time">{{
+              formatDate(article.published_at)
+            }}</span>
             <span class="article-language" v-if="article.original_language">
               {{ getLanguageName(article.original_language) }}
             </span>
           </div>
 
           <div class="article-actions">
-            <el-button
-              :icon="CopyDocument"
-              @click="copyLink"
-              type="text"
-            >
+            <el-button :icon="CopyDocument" @click="copyLink" type="text">
               复制链接
             </el-button>
-            <el-button
-              :icon="Link"
-              @click="openOriginal"
-              type="text"
-            >
+            <el-button :icon="Link" @click="openOriginal" type="text">
               查看原文
             </el-button>
           </div>
@@ -53,7 +42,12 @@
           <h1 class="article-title">
             {{ displayTitle }}
           </h1>
-          <div class="title-info" v-if="article.chinese_title && article.title !== article.chinese_title">
+          <div
+            class="title-info"
+            v-if="
+              article.chinese_title && article.title !== article.chinese_title
+            "
+          >
             <el-divider content-position="left">原文标题</el-divider>
             <p class="original-title">{{ article.title }}</p>
           </div>
@@ -109,7 +103,10 @@
         </div>
 
         <!-- 标签 -->
-        <div class="article-tags" v-if="article.tags && article.tags.length > 0">
+        <div
+          class="article-tags"
+          v-if="article.tags && article.tags.length > 0"
+        >
           <el-card>
             <template #header>
               <div class="tags-header">
@@ -119,13 +116,24 @@
             </template>
             <div class="tags-content">
               <el-tag
-                v-for="tag in article.tags"
-                :key="tag"
+                v-for="item in article.tags"
+                :key="item.tag.id"
                 type="info"
                 effect="plain"
                 size="default"
+                class="tag-item"
               >
-                {{ tag }}
+                {{ item.tag.name }}
+                <el-link
+                  v-if="item.tag"
+                  type="primary"
+                  :underline="false"
+                  class="follow-btn"
+                  @click="handleFollowTag(item.tag)"
+                  title="关注标签"
+                >
+                  <el-icon><Plus /></el-icon>
+                </el-link>
               </el-tag>
             </div>
           </el-card>
@@ -148,11 +156,16 @@
                 {{ formatDate(article.fetched_at) }}
               </el-descriptions-item>
               <el-descriptions-item label="处理状态">
-                <el-tag :type="getProcessingStatusType(article.llm_processing_status)">
+                <el-tag
+                  :type="getProcessingStatusType(article.llm_processing_status)"
+                >
                   {{ getProcessingStatusText(article.llm_processing_status) }}
                 </el-tag>
               </el-descriptions-item>
-              <el-descriptions-item label="处理时间" v-if="article.llm_processed_at">
+              <el-descriptions-item
+                label="处理时间"
+                v-if="article.llm_processed_at"
+              >
                 {{ formatDate(article.llm_processed_at) }}
               </el-descriptions-item>
               <el-descriptions-item label="新闻源">
@@ -161,12 +174,15 @@
               <el-descriptions-item label="分类" v-if="article.category">
                 {{ article.category }}
               </el-descriptions-item>
-              <el-descriptions-item label="原文语言" v-if="article.original_language">
+              <el-descriptions-item
+                label="原文语言"
+                v-if="article.original_language"
+              >
                 {{ getLanguageName(article.original_language) }}
               </el-descriptions-item>
               <el-descriptions-item label="是否已处理">
                 <el-tag :type="article.is_processed ? 'success' : 'info'">
-                  {{ article.is_processed ? '是' : '否' }}
+                  {{ article.is_processed ? "是" : "否" }}
                 </el-tag>
               </el-descriptions-item>
             </el-descriptions>
@@ -176,10 +192,7 @@
 
       <!-- 加载失败状态 -->
       <div class="error-state" v-else-if="!loading">
-        <el-empty
-          image="/images/error.svg"
-          description="文章加载失败"
-        >
+        <el-empty image="/images/error.svg" description="文章加载失败">
           <el-button type="primary" @click="loadArticle">重试</el-button>
         </el-empty>
       </div>
@@ -188,9 +201,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ref, computed, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 import {
   ArrowLeft,
   CopyDocument,
@@ -200,110 +213,120 @@ import {
   Document,
   Discount,
   InfoFilled,
-} from '@element-plus/icons-vue'
-import MarkdownIt from 'markdown-it'
-import hljs from 'highlight.js'
-import 'highlight.js/styles/github.css'
-import { useArticleStore } from '@/stores/article'
+  Plus,
+} from "@element-plus/icons-vue";
+import MarkdownIt from "markdown-it";
+import hljs from "highlight.js";
+import "highlight.js/styles/github.css";
+import { useArticleStore } from "@/stores/article";
 import {
   formatDate,
   getLanguageName,
   getProcessingStatusText,
   getProcessingStatusType,
   copyToClipboard,
-} from '@/utils'
-import type { Article } from '@/types'
+} from "@/utils";
+import { tagApi } from "@/api";
+import type { Article } from "@/types";
 
 // 路由
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
 // Store
-const articleStore = useArticleStore()
+const articleStore = useArticleStore();
 
 // Markdown 解析器
 const md = new MarkdownIt({
   highlight: function (str, lang) {
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return hljs.highlight(str, { language: lang }).value
+        return hljs.highlight(str, { language: lang }).value;
       } catch (__) {}
     }
-    return ''
-  }
-})
+    return "";
+  },
+});
 
 // 响应式状态
-const loading = ref(false)
+const loading = ref(false);
 const articleId = computed(() => {
-  return parseInt(route.params.id as string)
-})
+  return parseInt(route.params.id as string);
+});
 
 // 计算属性
-const article = computed(() => articleStore.currentArticle)
+const article = computed(() => articleStore.currentArticle);
 
 const displayTitle = computed(() => {
-  if (!article.value) return ''
-  return article.value.chinese_title || article.value.title
-})
+  if (!article.value) return "";
+  return article.value.chinese_title || article.value.title;
+});
 
 const displaySummary = computed(() => {
-  if (!article.value) return ''
-  return article.value.llm_summary || article.value.summary
-})
+  if (!article.value) return "";
+  return article.value.llm_summary || article.value.summary;
+});
 
 const formattedContent = computed(() => {
-  if (!article.value?.content) return ''
-  return md.render(article.value.content)
-})
+  if (!article.value?.content) return "";
+  return md.render(article.value.content);
+});
 
 // 生命周期
 onMounted(async () => {
-  await loadArticle()
-})
+  await loadArticle();
+});
 
 // 方法
 const loadArticle = async () => {
   if (isNaN(articleId.value)) {
-    ElMessage.error('无效的文章ID')
-    router.back()
-    return
+    ElMessage.error("无效的文章ID");
+    router.back();
+    return;
   }
 
   try {
-    loading.value = true
-    await articleStore.fetchArticle(articleId.value)
+    loading.value = true;
+    await articleStore.fetchArticle(articleId.value);
     if (!article.value) {
-      ElMessage.error('文章不存在')
-      router.back()
+      ElMessage.error("文章不存在");
+      router.back();
     }
   } catch (error) {
-    console.error('Failed to load article:', error)
-    ElMessage.error('加载文章失败')
+    console.error("Failed to load article:", error);
+    ElMessage.error("加载文章失败");
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 
 const goBack = () => {
-  router.back()
-}
+  router.back();
+};
 
 const copyLink = async () => {
-  if (!article.value) return
-  
+  if (!article.value) return;
+
   try {
-    await copyToClipboard(article.value.url)
-    ElMessage.success('链接已复制到剪贴板')
+    await copyToClipboard(article.value.url);
+    ElMessage.success("链接已复制到剪贴板");
   } catch (error) {
-    ElMessage.error('复制失败')
+    ElMessage.error("复制失败");
   }
-}
+};
 
 const openOriginal = () => {
-  if (!article.value) return
-  window.open(article.value.url, '_blank')
-}
+  if (!article.value) return;
+  window.open(article.value.url, "_blank");
+};
+const handleFollowTag = async (tag: any) => {
+  try {
+    await tagApi.follow(tag.id);
+    ElMessage.success(`已关注标签: ${tag.name}`);
+  } catch (error) {
+    ElMessage.error("关注失败");
+  }
+};
 </script>
 
 <style scoped>
@@ -424,7 +447,7 @@ const openOriginal = () => {
   background-color: var(--bg-color-page);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: 'Courier New', monospace;
+  font-family: "Courier New", monospace;
 }
 
 .content-body :deep(pre) {
@@ -438,6 +461,22 @@ const openOriginal = () => {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.tag-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.follow-btn {
+  margin-left: 4px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.follow-btn:hover {
+  opacity: 1;
 }
 
 .error-state {
